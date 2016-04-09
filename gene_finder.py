@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Given a dna strand (in this case salmonella) gene_finder finds protein sequences that could be genes
-Function takes under 3 minutes in current state with 1500 trials of longest_ORF_noncoding.
+Function takes under 1.5 minutes in current state with 1500 trials of longest_ORF_noncoding.
 
 @author: Margaret Crawford
 """
@@ -9,14 +9,6 @@ Function takes under 3 minutes in current state with 1500 trials of longest_ORF_
 import random
 from amino_acids import aa, codons, aa_table  # you may find these useful
 from load import load_seq
-
-def collapse(L):
-    """ Converts a list of strings to a string by concatenating all elements of the list """
-    output = ""
-    for s in L:
-        output = output + s
-    return output
-
 
 def shuffle_string(s):
     """Shuffles the characters in the input string
@@ -38,16 +30,14 @@ def get_complement(nucleotide):
     'G'
     >>> get_complement('W')
     input not a nucleotide.
+
+    Edit: Used a dictionary for this instead of if/elif statements, and a try/except
+    to deal with the edge case of a non-nucleotide answer.
     """
-    if nucleotide == 'A':
-        return 'T'
-    elif nucleotide == 'T':
-        return 'A'
-    elif nucleotide == 'G':
-        return 'C'
-    elif nucleotide == 'C':
-        return 'G'
-    else:
+    nucDict = {'A':'T', 'T':'A', 'G':'C', 'C':'G'}
+    try: 
+        return nucDict[nucleotide]
+    except KeyError:
         print 'input not a nucleotide.'
         return None
 
@@ -58,19 +48,16 @@ def get_reverse_complement(dna):
 
         dna: a DNA sequence represented as a string
         returns: the reverse complementary DNA sequence represented as a string
+        Edit: Used a string concatenation, not sure if its more efficient
+        but its pretty and readable.
+
     >>> get_reverse_complement("ATGCCCGCTTT")
     'AAAGCGGGCAT'
     >>> get_reverse_complement("CCGCGTTCA")
     'TGAACGCGG'
     """
-    n = len(dna)
-    string = ''
-    while n >= 1:
-        nucleotide = dna[n-1]
-        n = n-1
-        comp = get_complement(nucleotide)
-        string = string + comp #string updates with every iteration to concatenate the next letter
-    return string
+    l = [get_complement(char) for char in dna[::-1]]
+    return ''.join(l)
 
 def get_codons(dna):
     """ Takes a string input and splits it into a list with chunks of 3 letters,
@@ -80,15 +67,7 @@ def get_codons(dna):
     ['ATG', 'CCC', 'GCT', 'TT']
 
     """
-    n = 0
-    codon_list = []
-    while n <len(dna):
-        codon = dna[n:n+3]
-        n = n+3
-        codon_list.append(codon) 
-    return codon_list 
-
-
+    return [dna[i:i+3] for i in xrange(0, len(dna), 3)]
 
 def rest_of_ORF(dna):
     """ Takes a DNA sequence that is assumed to begin with a start
@@ -106,13 +85,13 @@ def rest_of_ORF(dna):
     codonlist = get_codons(dna)
     a = 0
     string = ''
-    while a < len(codonlist):
+    for a in range(len(codonlist)):
         codon = codonlist[a]
         if codon == 'TAG' or codon =='TAA' or codon =='TGA':
             return string
         else:
             string = string + codon
-            a = a+1
+            a += 1
 
     return string
 
@@ -201,10 +180,9 @@ def longest_ORF_noncoding(dna, num_trials):
         returns: the maximum length longest ORF 
 
         """
-    
+    longest = ''
     for i in range(num_trials):
         shuffle = shuffle_string(dna)
-        longest = ''
         if len(longest_ORF(shuffle)) > len(longest):
             longest = longest_ORF(shuffle)
     return len(longest)
@@ -253,6 +231,6 @@ def gene_finder(dna):
 if __name__ == "__main__":
     from load import load_seq
     dna = load_seq("./data/X73525.fa")
-    print gene_finder(dna)
+    #print gene_finder(dna)
     import doctest
     doctest.testmod()
