@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Given a dna strand (in this case salmonella) gene_finder finds protein sequences that could be genes
-Function takes under 1.5 minutes in current state with 1500 trials of longest_ORF_noncoding.
+Function takes about 8 seconds with 1500 trials of longest_ORF_noncoding.
 
 @author: Margaret Crawford
 """
@@ -59,16 +59,6 @@ def get_reverse_complement(dna):
     l = [get_complement(char) for char in dna[::-1]]
     return ''.join(l)
 
-def get_codons(dna):
-    """ Takes a string input and splits it into a list with chunks of 3 letters,
-    should be dna but it also works for other strings. 
-
-    >>> get_codons('ATGCCCGCTTT')
-    ['ATG', 'CCC', 'GCT', 'TT']
-
-    """
-    return [dna[i:i+3] for i in xrange(0, len(dna), 3)]
-
 def rest_of_ORF(dna):
     """ Takes a DNA sequence that is assumed to begin with a start
         codon and returns the sequence up to but not including the
@@ -82,19 +72,14 @@ def rest_of_ORF(dna):
     >>> rest_of_ORF("ATGAGATAGG")
     'ATGAGA'
     """
-    codonlist = get_codons(dna)
-    a = 0
     string = ''
-    for a in range(len(codonlist)):
-        codon = codonlist[a]
+    for i in xrange(0, len(dna), 3):
+        codon = dna[i:i+3]
         if codon == 'TAG' or codon =='TAA' or codon =='TGA':
             return string
         else:
-            string = string + codon
-            a += 1
-
+            string += codon
     return string
-
 
 def find_all_ORFs_oneframe(dna):
     """ Finds all non-nested open reading frames in the given DNA
@@ -112,11 +97,13 @@ def find_all_ORFs_oneframe(dna):
 
     ORFlist = []
     i = 0
-    while i < len(dna):
+    lend = len(dna)
+    while i < lend:
         codon = dna[i:i+3]
         if codon == 'ATG':
-            ORFlist.append(rest_of_ORF(dna[i:]))
-            i = i + len(rest_of_ORF(dna[i:]))
+            orf = rest_of_ORF(dna[i:])
+            ORFlist.append(orf)
+            i = i + len(orf)
         else:
             i = i+3
     return ORFlist
@@ -134,10 +121,7 @@ def find_all_ORFs(dna):
     >>> find_all_ORFs("ATGCATGAATGTAG")
     ['ATGCATGAATGTAG', 'ATGAATGTAG', 'ATG']
     """
-    dna2 = dna[1:]
-    dna3 = dna[2:]
-
-    ORFs = find_all_ORFs_oneframe(dna) + find_all_ORFs_oneframe(dna2) + find_all_ORFs_oneframe(dna3)
+    ORFs = find_all_ORFs_oneframe(dna) + find_all_ORFs_oneframe(dna[1:]) + find_all_ORFs_oneframe(dna[2:])
 
     return ORFs
     
@@ -151,9 +135,7 @@ def find_all_ORFs_both_strands(dna):
     ['ATGCGAATG', 'ATGCTACATTCGCAT']
     """
     reverse_strand = get_reverse_complement(dna)
-    ORFs = find_all_ORFs(dna) + find_all_ORFs(reverse_strand)
-   
-    return ORFs
+    return find_all_ORFs(dna) + find_all_ORFs(reverse_strand)
 
 
 def longest_ORF(dna):
@@ -175,18 +157,22 @@ def longest_ORF_noncoding(dna, num_trials):
     """ Computes the maximum length of the longest ORF over num_trials shuffles
         of the specfied DNA sequence
 
+        Edit: Saved length of longest string as a variable so it isn't
+        recalculated every time.
+
         dna: a DNA sequence
         num_trials: the number of random shuffles
         returns: the maximum length longest ORF 
 
         """
     longest = ''
+    lenl = 0
     for i in range(num_trials):
         shuffle = shuffle_string(dna)
-        if len(longest_ORF(shuffle)) > len(longest):
+        if len(longest_ORF(shuffle)) > lenl:
             longest = longest_ORF(shuffle)
+            lenl = len(longest)
     return len(longest)
-
 
 def coding_strand_to_AA(dna):
     """ Computes the Protein encoded by a sequence of DNA.  This function
@@ -204,7 +190,6 @@ def coding_strand_to_AA(dna):
     """
     list1 = get_codons(dna)
     string = ''
-    
     for codon in list1:
         try:
             string = string + aa_table[codon]
@@ -231,6 +216,6 @@ def gene_finder(dna):
 if __name__ == "__main__":
     from load import load_seq
     dna = load_seq("./data/X73525.fa")
-    #print gene_finder(dna)
+    print gene_finder(dna)
     import doctest
     doctest.testmod()
